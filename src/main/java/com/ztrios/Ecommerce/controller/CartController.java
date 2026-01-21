@@ -1,9 +1,15 @@
 package com.ztrios.Ecommerce.controller;
 
 
+
 import com.ztrios.Ecommerce.dto.req.CartItemRequest;
 import com.ztrios.Ecommerce.dto.res.CartResponse;
 import com.ztrios.Ecommerce.service.CartService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -20,37 +26,64 @@ public class CartController {
         this.cartService = cartService;
     }
 
+    @Operation(summary = "View user's cart")
     @GetMapping
     public CartResponse viewCart(Authentication authentication) {
-        UUID userId = extractUserId(authentication);
+        UUID userId = UUID.fromString(authentication.getName());
         return cartService.getCart(userId);
     }
 
+    @Operation(
+            summary = "Add item to cart",
+            requestBody = @RequestBody(
+                    required = true,
+                    content = @Content(schema = @Schema(implementation = CartItemRequest.class),
+                            examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
+                                    value = """
+                                               {
+                                                 "productId": "11111111-1111-1111-1111-111111111111",
+                                                 "quantity": 2
+                                               }
+                                               """
+                            )
+                    )
+            )
+    )
     @PostMapping("/items")
-    public CartResponse addItem(@Valid @RequestBody CartItemRequest request,
+    public CartResponse addItem(@Valid @org.springframework.web.bind.annotation.RequestBody CartItemRequest request,
                                 Authentication authentication) {
-        UUID userId = extractUserId(authentication);
+        UUID userId = UUID.fromString(authentication.getName());
         return cartService.addItem(userId, request);
     }
 
+    @Operation(
+            summary = "Update item quantity in cart",
+            requestBody = @RequestBody(
+                    required = true,
+                    content = @Content(schema = @Schema(implementation = CartItemRequest.class),
+                            examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
+                                    value = """
+                                               {
+                                                 "productId": "11111111-1111-1111-1111-111111111111",
+                                                 "quantity": 5
+                                               }
+                                               """
+                            )
+                    )
+            )
+    )
     @PutMapping("/items")
-    public CartResponse updateItem(@Valid @RequestBody CartItemRequest request,
+    public CartResponse updateItem(@Valid @org.springframework.web.bind.annotation.RequestBody CartItemRequest request,
                                    Authentication authentication) {
-        UUID userId = extractUserId(authentication);
+        UUID userId = UUID.fromString(authentication.getName());
         return cartService.updateItem(userId, request);
     }
 
+    @Operation(summary = "Remove item from cart")
     @DeleteMapping("/items/{productId}")
     public CartResponse removeItem(@PathVariable UUID productId,
                                    Authentication authentication) {
-        UUID userId = extractUserId(authentication);
+        UUID userId = UUID.fromString(authentication.getName());
         return cartService.removeItem(userId, productId);
     }
-
-    private UUID extractUserId(Authentication authentication) {
-        // email is stored as username
-        // User lookup happens inside service layer
-        return UUID.fromString(authentication.getName()); // see NOTE below
-    }
 }
-
