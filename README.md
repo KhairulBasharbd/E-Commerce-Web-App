@@ -176,9 +176,9 @@ src/main/java/com/example/ecommerce
 ```yaml
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/ecommerce_db
-    username: postgres
-    password: postgres
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/ecommerce_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
   jpa:
     hibernate:
       ddl-auto: update
@@ -186,8 +186,8 @@ spring:
     open-in-view: false
 
 jwt:
-  secret: your-super-secret-key
-  expiration: 86400000
+  ${jwt_key} :kekUJgI4idp1C2hgab4cwDcvB3y8xmwO3scdvByjCSE
+  expiration: ${mili_seconds} :86400000
 ```
 
 ## 🐳 9. Docker Support (Database)
@@ -197,8 +197,8 @@ Only PostgreSQL is dockerized for MVP simplicity.
 docker compose up -d
 ```
 
-You can run the postgresql database from docker using :
-- docker-compose.yml
+- You can run the postgresql database from docker image using `docker-compose.yml` file.
+- If you already have local or cloud postgresql running, then you can add your DB credentials into `application.yml`.
 
 ## 🔮 10. Future Improvements
 
