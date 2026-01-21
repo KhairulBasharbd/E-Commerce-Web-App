@@ -2,6 +2,7 @@ package com.ztrios.Ecommerce.controller;
 
 
 import com.ztrios.Ecommerce.dto.res.OrderResponse;
+import com.ztrios.Ecommerce.security.CustomUserDetails;
 import com.ztrios.Ecommerce.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -29,7 +30,9 @@ public class OrderController {
     )
     @PostMapping
     public OrderResponse placeOrder(Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        UUID userId = userDetails.getId();
         return orderService.placeOrder(userId);
     }
 }

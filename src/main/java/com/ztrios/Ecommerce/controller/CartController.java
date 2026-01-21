@@ -4,6 +4,7 @@ package com.ztrios.Ecommerce.controller;
 
 import com.ztrios.Ecommerce.dto.req.CartItemRequest;
 import com.ztrios.Ecommerce.dto.res.CartResponse;
+import com.ztrios.Ecommerce.security.CustomUserDetails;
 import com.ztrios.Ecommerce.service.CartService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,6 +13,7 @@ import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -29,7 +31,10 @@ public class CartController {
     @Operation(summary = "View user's cart")
     @GetMapping
     public CartResponse viewCart(Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        UUID userId = userDetails.getId();
+
         return cartService.getCart(userId);
     }
 
@@ -50,9 +55,10 @@ public class CartController {
             )
     )
     @PostMapping("/items")
-    public CartResponse addItem(@Valid @org.springframework.web.bind.annotation.RequestBody CartItemRequest request,
-                                Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+    public CartResponse addItem(@Valid @org.springframework.web.bind.annotation.RequestBody CartItemRequest request, Authentication authentication) {
+
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        UUID userId = userDetails.getId();
         return cartService.addItem(userId, request);
     }
 
@@ -73,17 +79,18 @@ public class CartController {
             )
     )
     @PutMapping("/items")
-    public CartResponse updateItem(@Valid @org.springframework.web.bind.annotation.RequestBody CartItemRequest request,
-                                   Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+    public CartResponse updateItem(@Valid @org.springframework.web.bind.annotation.RequestBody CartItemRequest request, Authentication authentication) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        UUID userId = userDetails.getId();
         return cartService.updateItem(userId, request);
     }
 
     @Operation(summary = "Remove item from cart")
     @DeleteMapping("/items/{productId}")
-    public CartResponse removeItem(@PathVariable UUID productId,
-                                   Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+    public CartResponse removeItem(@PathVariable UUID productId, Authentication authentication) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        UUID userId = userDetails.getId();
+
         return cartService.removeItem(userId, productId);
     }
 }

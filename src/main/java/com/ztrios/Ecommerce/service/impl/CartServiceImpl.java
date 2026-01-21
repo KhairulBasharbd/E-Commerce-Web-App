@@ -1,7 +1,5 @@
 package com.ztrios.Ecommerce.service.impl;
 
-
-
 import com.ztrios.Ecommerce.dto.req.CartItemRequest;
 import com.ztrios.Ecommerce.dto.res.CartItemResponse;
 import com.ztrios.Ecommerce.dto.res.CartResponse;
@@ -15,10 +13,8 @@ import com.ztrios.Ecommerce.repository.ProductRepository;
 import com.ztrios.Ecommerce.repository.UserRepository;
 import com.ztrios.Ecommerce.service.CartService;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class CartServiceImpl implements CartService {
@@ -35,51 +31,97 @@ public class CartServiceImpl implements CartService {
         this.productRepository = productRepository;
     }
 
+    // ===================== GET CART =====================
     @Override
     public CartResponse getCart(UUID userId) {
-        Cart cart = getOrCreateCart(userId);
+
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new NotFoundException("Item not found in cart"));
+
+        if (cart == null) {
+            // return EMPTY cart, do not create DB row
+            return new CartResponse(null, userId, List.of());
+        }
+
         return mapCart(cart);
     }
 
+    // ===================== ADD ITEM =====================
     @Override
     public CartResponse addItem(UUID userId, CartItemRequest request) {
-        Cart cart = getOrCreateCart(userId);
-        Product product = productRepository.findById(request.productId())
-                .orElseThrow(() -> new NotFoundException("Product not found"));
-        cart.addItem(new CartItem(product, request.quantity()));
-        cartRepository.save(cart);
-        return mapCart(cart);
-    }
 
-    @Override
-    public CartResponse updateItem(UUID userId, CartItemRequest request) {
-        Cart cart = getOrCreateCart(userId);
+        User user = getUser(userId);
+        Product product = getProduct(request.productId());
+
+        Cart cart = cartRepository.findByUser(user)
+                .orElseGet(() -> cartRepository.save(new Cart(user)));
+
         cart.getItems().stream()
-                .filter(i -> i.getProduct().getId().equals(request.productId()))
+                .filter(i -> i.getProduct().getId().equals(product.getId()))
                 .findFirst()
                 .ifPresentOrElse(
-                        i -> i.setQuantity(request.quantity()),
-                        () -> cart.addItem(new CartItem(
-                                productRepository.findById(request.productId())
-                                        .orElseThrow(() -> new NotFoundException("Product not found")),
-                                request.quantity()))
+                        i -> i.setQuantity(i.getQuantity() + request.quantity()),
+                        () -> cart.addItem(new CartItem(product, request.quantity()))
                 );
+
         cartRepository.save(cart);
         return mapCart(cart);
     }
 
+    // ===================== UPDATE ITEM =====================
+    @Override
+    public CartResponse updateItem(UUID userId, CartItemRequest request) {
+
+        Cart cart = getExistingCart(userId);
+
+        CartItem item = cart.getItems().stream()
+                .filter(i -> i.getProduct().getId().equals(request.productId()))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Item not found in cart"));
+
+        item.setQuantity(request.quantity());
+
+        cartRepository.save(cart);
+        return mapCart(cart);
+    }
+
+    // ===================== REMOVE ITEM =====================
     @Override
     public CartResponse removeItem(UUID userId, UUID productId) {
-        Cart cart = getOrCreateCart(userId);
-        cart.removeItem(productId);
+
+        Cart cart = getExistingCart(userId);
+
+        boolean removed = cart.getItems()
+                .removeIf(i -> i.getProduct().getId().equals(productId));
+
+        if (!removed) {
+            throw new NotFoundException("Item not found in cart");
+        }
+
+        // optional cleanup
+        if (cart.getItems().isEmpty()) {
+            cartRepository.delete(cart);
+            return new CartResponse(null, userId, List.of());
+        }
+
         cartRepository.save(cart);
         return mapCart(cart);
     }
 
-    private Cart getOrCreateCart(UUID userId) {
-        User user = userRepository.findById(userId)
+    // ===================== HELPERS =====================
+    private Cart getExistingCart(UUID userId) {
+        return cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new NotFoundException("Cart does not exist"));
+    }
+
+    private User getUser(UUID userId) {
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
-        return cartRepository.findByUser(user).orElseGet(() -> cartRepository.save(new Cart(user)));
+    }
+
+    private Product getProduct(UUID productId) {
+        return productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException("Product not found"));
     }
 
     private CartResponse mapCart(Cart cart) {
@@ -88,9 +130,10 @@ public class CartServiceImpl implements CartService {
                         i.getProduct().getId(),
                         i.getProduct().getName(),
                         i.getQuantity(),
-                        i.getProduct().getPrice().doubleValue()
+                        i.getProduct().getPrice()
                 ))
-                .collect(Collectors.toList());
+                .toList();
+
         return new CartResponse(cart.getId(), cart.getUser().getId(), items);
     }
 }
