@@ -116,7 +116,10 @@ cd E-Commerce-Web-App
 ```
 
 ### 🐘 Start PostgreSQL (Docker – Recommended)
-- Run postgresql database from docker using `docker-compose.yml` file
+
+- You can run the postgresql database from docker image using `docker-compose.yml` file.
+- If you already have local or cloud postgresql running, then you can add your DB credentials into `application.yml`.
+- If you want to Run postgresql database from docker using `docker-compose.yml` file
 ```bash
 docker compose up -d
 ```
@@ -196,9 +199,6 @@ Only PostgreSQL is dockerized for MVP simplicity.
 ```bash
 docker compose up -d
 ```
-
-- You can run the postgresql database from docker image using `docker-compose.yml` file.
-- If you already have local or cloud postgresql running, then you can add your DB credentials into `application.yml`.
 
 ## 🔮 10. Future Improvements
 
