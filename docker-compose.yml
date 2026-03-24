@@ -1,5 +1,7 @@
 
 services:
+
+  # ── PostgreSQL database ──────────────────────────────────────────────────────
   postgres:
     image: postgres:16
     container_name: ecommerce-postgres
@@ -16,6 +18,40 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+    # Simple health-check so the app service waits until Postgres is ready
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ecommerce_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── Spring Boot application ──────────────────────────────────────────────────
+  app:
+    # Build from the Dockerfile in the project root.
+    # Jenkins runs 'docker compose up -d --build' so the image is always rebuilt
+    # from the latest JAR before the container is (re)started.
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: ecommerce-app
+    restart: unless-stopped
+
+    # Override datasource settings so the app can reach the 'postgres' service
+    # by its Docker-internal hostname instead of 'localhost'.
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/ecommerce_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+
+    ports:
+      - "8080:8080"
+
+    # Wait until PostgreSQL reports healthy before starting the app
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 
 volumes:
