@@ -1,5 +1,7 @@
 
 server:
+  # Port is overridden to 8090 at runtime by Jenkins via -Dserver.port=8090
+  # This default (8080) is used when running locally from your IDE
   port: 8080
 
 spring:
@@ -7,10 +9,11 @@ spring:
     name: Ecommerce
 
   datasource:
+    # Jenkins passes DB_URL as a JVM system property: -DDB_URL=...
+    # Local dev fallback: connects to localhost postgres directly
     url: ${DB_URL:jdbc:postgresql://localhost:5432/ecommerce_db}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
-
 
   jpa:
     hibernate:
@@ -30,6 +33,15 @@ security:
     secret: kekUJgI4idp1C2hgab4cwDcvB3y8xmwO3scdvByjCSE
     expiration: 86400000 # 1 day
 
+# ── Actuator: exposes /actuator/health for Jenkins health check stage ──
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always
 
 springdoc:
   api-docs:
@@ -45,4 +57,4 @@ springdoc:
 logging:
   level:
     org.springframework.security: INFO
-    org.hibernate.SQL: DEBUG
+    org.hibernate.SQL: DEBUG
