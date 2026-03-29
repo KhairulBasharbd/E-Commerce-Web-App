@@ -44,7 +44,8 @@ public class SecurityConfig {
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers(
                                 "/auth/**",
-                                "/products/**"
+                                "/products/**",
+                                "/actuator/**"
                         ).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
