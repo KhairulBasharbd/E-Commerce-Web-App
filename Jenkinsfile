@@ -107,45 +107,68 @@ pipeline {
         stage('Deploy') {
             steps {
                 echo '🚀 Deploying application...'
-                sh """
-                    # Create deployment directory if it does not exist
-                    mkdir -p ${DEPLOY_DIR}
 
-                    # ── Stop old instance ───────────────────────────
-                    # Read the PID file we saved last time and kill that process.
-                    # '|| true' means: if there's nothing to kill, just continue.
-                    if [ -f ${PID_FILE} ]; then
-                        OLD_PID=\$(cat ${PID_FILE})
-                        echo "Stopping old instance PID: \$OLD_PID"
-                        kill \$OLD_PID 2>/dev/null || true
-                        sleep 3
-                    fi
+                // ──────────────────────────────────────────────────────────
+                // CRITICAL FIX: JENKINS_NODE_COOKIE=dontKillMe
+                //
+                // By default, Jenkins has a "ProcessTreeKiller" that terminates
+                // ALL child processes spawned by an 'sh' block when the block ends.
+                // This means our 'nohup java -jar ... &' would get killed instantly!
+                //
+                // Setting JENKINS_NODE_COOKIE=dontKillMe tells Jenkins:
+                // "This process is intentionally left running — do NOT kill it."
+                // ──────────────────────────────────────────────────────────
+                withEnv(['JENKINS_NODE_COOKIE=dontKillMe']) {
+                    sh """
+                        # Create deployment directory if it does not exist
+                        mkdir -p ${DEPLOY_DIR}
 
-                    # Also use pkill as a safety net (catches any orphaned processes)
-                    pkill -f '${APP_JAR}' || true
-                    sleep 2
+                        # ── Stop old instance ───────────────────────────
+                        if [ -f ${PID_FILE} ]; then
+                            OLD_PID=\$(cat ${PID_FILE})
+                            echo "Stopping old instance PID: \$OLD_PID"
+                            kill \$OLD_PID 2>/dev/null || true
+                            sleep 3
+                        fi
 
-                    # ── Copy new JAR ────────────────────────────────
-                    cp target/Ecommerce-0.0.1-SNAPSHOT.jar ${DEPLOY_DIR}/${APP_JAR}
-                    echo "JAR copied to ${DEPLOY_DIR}/${APP_JAR}"
+                        # Safety net: kill any lingering process using our JAR name
+                        pkill -f '${APP_JAR}' || true
+                        sleep 2
 
-                    # ── Start new instance ──────────────────────────
-                    # nohup: keep running after this shell exits
-                    # &: run in background so pipeline can continue
-                    # All output goes to the log file
-                    nohup java \
-                        -Dserver.port=${APP_PORT} \
-                        -DDB_URL="${DB_URL}" \
-                        -DDB_USERNAME=${DB_USERNAME} \
-                        -DDB_PASSWORD=${DB_PASSWORD} \
-                        -Dsecurity.jwt.secret=${JWT_SECRET} \
-                        -jar ${DEPLOY_DIR}/${APP_JAR} \
-                        > ${APP_LOG} 2>&1 &
+                        # ── Copy new JAR ────────────────────────────────
+                        cp target/Ecommerce-0.0.1-SNAPSHOT.jar ${DEPLOY_DIR}/${APP_JAR}
+                        echo "JAR copied to ${DEPLOY_DIR}/${APP_JAR}"
 
-                    # Save the new PID so next deploy can stop it cleanly
-                    echo \$! > ${PID_FILE}
-                    echo "✅ App started with PID: \$(cat ${PID_FILE})"
-                """
+                        # ── Start new instance ──────────────────────────
+                        # nohup + & = run in background, persist after shell exits
+                        # -Dserver.address=0.0.0.0 = bind to ALL interfaces (not just localhost)
+                        #   This is REQUIRED so that Docker port mapping can reach the app
+                        nohup java \
+                            -Dserver.port=${APP_PORT} \
+                            -Dserver.address=0.0.0.0 \
+                            -DDB_URL="${DB_URL}" \
+                            -DDB_USERNAME=${DB_USERNAME} \
+                            -DDB_PASSWORD=${DB_PASSWORD} \
+                            -Dsecurity.jwt.secret=${JWT_SECRET} \
+                            -jar ${DEPLOY_DIR}/${APP_JAR} \
+                            > ${APP_LOG} 2>&1 &
+
+                        # Save PID for next deploy cycle
+                        echo \$! > ${PID_FILE}
+                        NEW_PID=\$(cat ${PID_FILE})
+                        echo "✅ App started with PID: \$NEW_PID"
+
+                        # Wait briefly, then verify the process is actually alive
+                        sleep 5
+                        if kill -0 \$NEW_PID 2>/dev/null; then
+                            echo "✅ Process \$NEW_PID is alive and running"
+                        else
+                            echo "❌ Process \$NEW_PID died immediately! Dumping log:"
+                            cat ${APP_LOG}
+                            exit 1
+                        fi
+                    """
+                }
             }
         }
 
