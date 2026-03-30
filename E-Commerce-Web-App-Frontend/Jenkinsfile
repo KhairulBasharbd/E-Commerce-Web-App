@@ -27,82 +27,59 @@ pipeline {
             }
         }
 
-        stage('Setup Dependencies') {
+        stage('Build & Deploy') {
             steps {
-                echo '🔧 Setting up Node.js and pnpm...'
-                // This assumes the 'nodejs' plugin is installed and a tool named 'Node20' is configured.
-                // If you don't have the plugin, you can install node manually here.
-                script {
-                    try {
-                        sh 'node -v'
-                        sh 'pnpm -v'
-                    } catch (e) {
-                         echo 'Node/pnpm not found. Installing pnpm...'
-                         sh 'npm install -g pnpm || true'
+                dir('E-Commerce-Web-App-Frontend') {
+                    stage('Setup Dependencies') {
+                        echo '🔧 Setting up Node.js and pnpm...'
+                        script {
+                            try {
+                                sh 'node -v'
+                                sh 'pnpm -v'
+                            } catch (e) {
+                                echo 'Node/pnpm not found. Installing pnpm...'
+                                sh 'npm install -g pnpm || true'
+                            }
+                        }
+                    }
+
+                    stage('Install & Build') {
+                        echo '📦 Installing dependencies and building project...'
+                        sh 'pnpm install --frozen-lockfile'
+                        sh 'pnpm build'
+                    }
+
+                    stage('Deploy') {
+                        echo '🚀 Deploying frontend locally...'
+                        withEnv(['JENKINS_NODE_COOKIE=dontKillMe']) {
+                            sh """
+                                mkdir -p ${DEPLOY_DIR}
+                                if [ -f ${PID_FILE} ]; then
+                                    OLD_PID=\$(cat ${PID_FILE})
+                                    kill \$OLD_PID 2>/dev/null || true
+                                    sleep 3
+                                fi
+                                pkill -f 'next-server' || true
+                                sleep 2
+                                nohup pnpm start --port ${PORT} > ${APP_LOG} 2>&1 &
+                                echo \$! > ${PID_FILE}
+                                sleep 5
+                                if kill -0 \$(cat ${PID_FILE}) 2>/dev/null; then
+                                    echo "✅ Frontend started successfully"
+                                else
+                                    echo "❌ Frontend failed to start"
+                                    cat ${APP_LOG}
+                                    exit 1
+                                fi
+                            """
+                        }
+                    }
+
+                    stage('Health Check') {
+                        echo '🏥 Checking frontend health...'
+                        sh "curl -sf http://localhost:${PORT} > /dev/null || exit 1"
                     }
                 }
-            }
-        }
-
-        stage('Install & Build') {
-            steps {
-                echo '📦 Installing dependencies and building project...'
-                sh 'pnpm install --frozen-lockfile'
-                sh 'pnpm build'
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                echo '🚀 Deploying frontend locally...'
-                
-                // JENKINS_NODE_COOKIE=dontKillMe prevents Jenkins from killing the background process
-                withEnv(['JENKINS_NODE_COOKIE=dontKillMe']) {
-                    sh """
-                        mkdir -p ${DEPLOY_DIR}
-
-                        # ── Stop old instance ───────────────────────────
-                        if [ -f ${PID_FILE} ]; then
-                            OLD_PID=\$(cat ${PID_FILE})
-                            echo "Stopping old instance PID: \$OLD_PID"
-                            kill \$OLD_PID 2>/dev/null || true
-                            sleep 3
-                        fi
-
-                        # Safety net: kill any lingering next-server processes
-                        pkill -f 'next-server' || true
-                        sleep 2
-
-                        # ── Start new instance ──────────────────────────
-                        echo "Starting pnpm start on port ${PORT}..."
-                        nohup pnpm start --port ${PORT} > ${APP_LOG} 2>&1 &
-
-                        # Save PID for next deploy cycle
-                        echo \$! > ${PID_FILE}
-                        NEW_PID=\$(cat ${PID_FILE})
-                        echo "✅ Frontend started with PID: \$NEW_PID"
-
-                        # Wait briefly to ensure it didn't crash
-                        sleep 5
-                        if kill -0 \$NEW_PID 2>/dev/null; then
-                            echo "✅ Process \$NEW_PID is alive"
-                        else
-                            echo "❌ Process \$NEW_PID died immediately! Dumping log:"
-                            cat ${APP_LOG}
-                            exit 1
-                        fi
-                    """
-                }
-            }
-        }
-
-        stage('Health Check') {
-            steps {
-                echo '🏥 Checking frontend health...'
-                sh """
-                    curl -sf http://localhost:${PORT} > /dev/null || (echo "❌ Frontend unreachable" && exit 1)
-                    echo "✅ Frontend is up and running at http://localhost:${PORT}"
-                """
             }
         }
     }
