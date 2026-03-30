@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs "NodeJS_Latest"
+    }
+
     environment {
         PORT = '3000'
         DEPLOY_DIR = '/var/jenkins_home/deployments/frontend'
