@@ -76,15 +76,17 @@ export default function AdminProductsPage() {
         try {
             if (editingProduct) {
                 await adminApi.updateProduct(editingProduct.id, formData);
-                toast.success('Product updated');
+                toast.success('Product updated successfully');
             } else {
                 await adminApi.createProduct(formData);
-                toast.success('Product created');
+                toast.success('Product created successfully');
             }
             setModalOpen(false);
             fetchData();
-        } catch {
-            toast.error('Operation failed');
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Operation failed. Please verify admin permissions.';
+            toast.error(message);
+            console.error('Admin operation error:', error);
         } finally {
             setFormLoading(false);
         }
@@ -197,7 +199,7 @@ export default function AdminProductsPage() {
                         <div className="space-y-2">
                             <label className="text-xs font-black uppercase text-slate-500 tracking-widest ml-1">Category</label>
                             <select
-                                className="input-field"
+                                className="input-field text-black"
                                 value={formData.category}
                                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                             >

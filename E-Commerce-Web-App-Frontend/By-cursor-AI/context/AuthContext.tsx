@@ -21,16 +21,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
 
-    // Rehydrate from localStorage on mount
+// Rehydrate from localStorage on mount
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
             const decoded = decodeToken(token);
             if (decoded) {
                 setUser({ email: decoded.email, role: decoded.role, token });
+                // Ensure cookie is in sync for middleware
+                document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;
             } else {
                 localStorage.removeItem('token');
-                localStorage.removeItem('user');
+                document.cookie = 'token=; path=/; max-age=0';
             }
         }
         setIsLoading(false);
@@ -41,12 +43,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (decoded) {
             const authUser: AuthUser = { ...decoded, token };
             localStorage.setItem('token', token);
+            // Set cookie for middleware
+            document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;
             setUser(authUser);
         }
     };
 
     const logout = () => {
         localStorage.removeItem('token');
+        // Remove cookie
+        document.cookie = 'token=; path=/; max-age=0';
         setUser(null);
         router.push('/login');
     };
