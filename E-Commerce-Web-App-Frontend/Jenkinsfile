@@ -21,16 +21,9 @@ pipeline {
         stage('Setup Dependencies') {
             steps {
                 dir('E-Commerce-Web-App-Frontend') {
-                    echo '🔧 Setting up Node.js and pnpm...'
-                    script {
-                        try {
-                            sh 'node -v'
-                            sh 'pnpm -v'
-                        } catch (e) {
-                            echo 'Node/pnpm not found. Installing pnpm...'
-                            sh 'npm install -g pnpm || true'
-                        }
-                    }
+                    echo '🔧 Setting up Node.js...'
+                    sh 'node -v'
+                    // We will let npx handle pnpm to avoid "not found" errors
                 }
             }
         }
@@ -39,8 +32,9 @@ pipeline {
             steps {
                 dir('E-Commerce-Web-App-Frontend') {
                     echo '📦 Installing dependencies and building project...'
-                    sh 'pnpm install --frozen-lockfile'
-                    sh 'pnpm build'
+                    // Use npx to ensure pnpm is available
+                    sh 'npx pnpm install --frozen-lockfile'
+                    sh 'npx pnpm build'
                 }
             }
         }
@@ -59,7 +53,8 @@ pipeline {
                             fi
                             pkill -f 'next-server' || true
                             sleep 2
-                            nohup pnpm start --port ${PORT} > ${APP_LOG} 2>&1 &
+                            # Use npx pnpm start
+                            nohup npx pnpm start --port ${PORT} > ${APP_LOG} 2>&1 &
                             echo \$! > ${PID_FILE}
                             sleep 10
                             if kill -0 \$(cat ${PID_FILE}) 2>/dev/null; then
