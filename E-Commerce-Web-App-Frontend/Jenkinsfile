@@ -1,103 +1,94 @@
 pipeline {
-    // Run on the Jenkins server itself (agent any) to match the backend setup
-    // and allow persistent background processes.
     agent any
 
     environment {
-        // ── App config ────────────────────────────────────────────────
         PORT = '3000'
         DEPLOY_DIR = '/var/jenkins_home/deployments/frontend'
         PID_FILE = '/var/jenkins_home/deployments/frontend-app.pid'
         APP_LOG = '/var/jenkins_home/deployments/frontend-app.log'
-
-        // ── Backend Connection ───────────────────────────────────────
-        // Use 'host.docker.internal' if the backend is running on Windows host,
-        // or 'localhost' if the backend is running inside the same Jenkins container.
-        // Based on your backend Jenkinsfile, it runs on port 8090.
         NEXT_PUBLIC_API_URL = 'http://localhost:8090'
-        
         CI = 'true'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                echo '📥 Pulling latest frontend code...'
+                echo '📥 Pulling latest code...'
                 checkout scm
             }
         }
 
-        stage('Build & Deploy') {
+        stage('Setup Dependencies') {
             steps {
                 dir('E-Commerce-Web-App-Frontend') {
-                    stage('Setup Dependencies') {
-                        echo '🔧 Setting up Node.js and pnpm...'
-                        script {
-                            try {
-                                sh 'node -v'
-                                sh 'pnpm -v'
-                            } catch (e) {
-                                echo 'Node/pnpm not found. Installing pnpm...'
-                                sh 'npm install -g pnpm || true'
-                            }
+                    echo '🔧 Setting up Node.js and pnpm...'
+                    script {
+                        try {
+                            sh 'node -v'
+                            sh 'pnpm -v'
+                        } catch (e) {
+                            echo 'Node/pnpm not found. Installing pnpm...'
+                            sh 'npm install -g pnpm || true'
                         }
-                    }
-
-                    stage('Install & Build') {
-                        echo '📦 Installing dependencies and building project...'
-                        sh 'pnpm install --frozen-lockfile'
-                        sh 'pnpm build'
-                    }
-
-                    stage('Deploy') {
-                        echo '🚀 Deploying frontend locally...'
-                        withEnv(['JENKINS_NODE_COOKIE=dontKillMe']) {
-                            sh """
-                                mkdir -p ${DEPLOY_DIR}
-                                if [ -f ${PID_FILE} ]; then
-                                    OLD_PID=\$(cat ${PID_FILE})
-                                    kill \$OLD_PID 2>/dev/null || true
-                                    sleep 3
-                                fi
-                                pkill -f 'next-server' || true
-                                sleep 2
-                                nohup pnpm start --port ${PORT} > ${APP_LOG} 2>&1 &
-                                echo \$! > ${PID_FILE}
-                                sleep 5
-                                if kill -0 \$(cat ${PID_FILE}) 2>/dev/null; then
-                                    echo "✅ Frontend started successfully"
-                                else
-                                    echo "❌ Frontend failed to start"
-                                    cat ${APP_LOG}
-                                    exit 1
-                                fi
-                            """
-                        }
-                    }
-
-                    stage('Health Check') {
-                        echo '🏥 Checking frontend health...'
-                        sh "curl -sf http://localhost:${PORT} > /dev/null || exit 1"
                     }
                 }
+            }
+        }
+
+        stage('Install & Build') {
+            steps {
+                dir('E-Commerce-Web-App-Frontend') {
+                    echo '📦 Installing dependencies and building project...'
+                    sh 'pnpm install --frozen-lockfile'
+                    sh 'pnpm build'
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                dir('E-Commerce-Web-App-Frontend') {
+                    echo '🚀 Deploying frontend locally...'
+                    withEnv(['JENKINS_NODE_COOKIE=dontKillMe']) {
+                        sh """
+                            mkdir -p ${DEPLOY_DIR}
+                            if [ -f ${PID_FILE} ]; then
+                                OLD_PID=\$(cat ${PID_FILE})
+                                kill \$OLD_PID 2>/dev/null || true
+                                sleep 3
+                            fi
+                            pkill -f 'next-server' || true
+                            sleep 2
+                            nohup pnpm start --port ${PORT} > ${APP_LOG} 2>&1 &
+                            echo \$! > ${PID_FILE}
+                            sleep 10
+                            if kill -0 \$(cat ${PID_FILE}) 2>/dev/null; then
+                                echo "✅ Frontend started successfully"
+                            else
+                                echo "❌ Frontend failed to start"
+                                cat ${APP_LOG}
+                                exit 1
+                            fi
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                echo '🏥 Checking frontend health...'
+                sh "curl -sf http://localhost:${PORT} > /dev/null || exit 1"
             }
         }
     }
 
     post {
         success {
-            echo """
-╔══════════════════════════════════════════════════╗
-║  🎉  FRONTEND DEPLOYED SUCCEEDED  ║
-╠══════════════════════════════════════════════════╣
-║  URL      :  http://localhost:${PORT}            ║
-║  Backend  :  ${NEXT_PUBLIC_API_URL}              ║
-╚══════════════════════════════════════════════════╝
-"""
+            echo "🎉 FRONTEND DEPLOYED SUCCEEDED at http://localhost:${PORT}"
         }
         failure {
-            echo '❌ Pipeline failed. Check logs and ${APP_LOG}'
-            sh 'tail -n 50 ${APP_LOG} || true'
+            echo '❌ Pipeline failed. Check logs.'
         }
     }
 }
