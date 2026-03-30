@@ -131,7 +131,7 @@ mvn clean spring-boot:run
 
 Application will start at:
 ```
-http://localhost:8080
+http://localhost:8081
 ```
 
 ## 📘 6. API Documentation (Swagger)
@@ -140,7 +140,7 @@ Swagger UI is enabled via springdoc-openapi.
 
 👉 Swagger URL:
 ```
-http://localhost:8080/swagger-ui.html
+http://localhost:8081/swagger-ui.html
 ```
 
 ### 🔐 Using JWT in Swagger

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, Star, Package } from 'lucide-react';
+import { ShoppingCart, Star, Package, Eye } from 'lucide-react';
 import type { Product } from '@/types';
 import { formatPrice } from '@/lib/utils';
 import { cartApi } from '@/lib/api';
@@ -17,12 +17,11 @@ interface ProductCardProps {
 
 // Category colors
 const categoryColors: Record<string, string> = {
-    ELECTRONICS: 'bg-blue-500/20 text-blue-300',
-    CLOTHING: 'bg-pink-500/20 text-pink-300',
-    FOOD: 'bg-orange-500/20 text-orange-300',
-    BOOKS: 'bg-amber-500/20 text-amber-300',
-    SPORTS: 'bg-green-500/20 text-green-300',
-    DEFAULT: 'bg-violet-500/20 text-violet-300',
+    ELECTRONICS: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    FASHION: 'bg-pink-500/10 text-pink-400 border-pink-500/20',
+    HOME_LIVING: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+    ACCESSORIES: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    DEFAULT: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
 };
 
 function getCategoryColor(category: string) {
@@ -34,7 +33,9 @@ export default function ProductCard({ product }: ProductCardProps) {
     const { refreshCart } = useCart();
     const { isAuthenticated, isAdmin } = useAuth();
 
-    const handleAddToCart = async () => {
+    const handleAddToCart = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (!isAuthenticated) {
             toast.error('Please login to add items to cart');
             return;
@@ -52,59 +53,80 @@ export default function ProductCard({ product }: ProductCardProps) {
     };
 
     return (
-        <div className="group relative flex flex-col rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm overflow-hidden hover:border-violet-500/40 hover:bg-white/8 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-500/10">
-            {/* Product Image Placeholder */}
-            <Link href={`/products/${product.id}`} className="relative h-48 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center overflow-hidden">
-                <Package className="h-16 w-16 text-slate-600 group-hover:text-slate-500 transition-colors" />
-                <div className="absolute inset-0 bg-gradient-to-tr from-violet-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="group relative flex flex-col rounded-3xl border border-white/10 bg-slate-900/50 backdrop-blur-md overflow-hidden hover:border-violet-500/40 hover:bg-slate-900/80 transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(139,92,246,0.15)]">
+            {/* Image Section */}
+            <Link href={`/products/${product.id}`} className="relative h-56 bg-gradient-to-br from-slate-800 to-slate-950 flex items-center justify-center overflow-hidden">
+                <Package className="h-20 w-20 text-slate-700 group-hover:text-violet-500/40 group-hover:scale-110 transition-all duration-700" />
+                
+                {/* Overlay on hover */}
+                <div className="absolute inset-0 bg-violet-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                
+                {/* Visual indicator for "View Details" */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
+                    <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-full flex items-center gap-2 text-white text-xs font-bold shadow-2xl">
+                        <Eye className="h-4 w-4" />
+                        View Details
+                    </div>
+                </div>
+
                 {!product.active && (
-                    <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center backdrop-blur-sm">
-                        <span className="text-sm font-semibold text-red-400 bg-red-400/10 px-3 py-1 rounded-full border border-red-400/30">
-                            Out of Stock
+                    <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center backdrop-blur-sm z-10">
+                        <span className="text-xs font-black uppercase tracking-widest text-red-400 bg-red-400/10 px-4 py-2 rounded-full border border-red-400/30">
+                            Sold Out
                         </span>
                     </div>
                 )}
+                
                 {product.stockQuantity <= 5 && product.active && (
-                    <span className="absolute top-3 right-3 text-xs font-semibold text-orange-300 bg-orange-500/20 px-2 py-1 rounded-full border border-orange-500/30">
-                        Only {product.stockQuantity} left
+                    <span className="absolute top-4 right-4 text-[10px] font-black uppercase tracking-tighter text-orange-400 bg-orange-500/10 px-3 py-1.5 rounded-full border border-orange-500/20 backdrop-blur-md">
+                        Low Stock: {product.stockQuantity}
                     </span>
                 )}
             </Link>
 
-            {/* Content */}
-            <div className="flex flex-col flex-1 p-4 gap-2">
-                <div className="flex items-start justify-between gap-2">
+            {/* Content Section */}
+            <div className="flex flex-col flex-1 p-6 gap-4">
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border ${getCategoryColor(product.category)}`}>
+                            {product.category}
+                        </span>
+                        <div className="flex items-center gap-1 text-amber-400 font-bold text-xs ring-1 ring-white/5 py-1 px-2 rounded-lg bg-white/5">
+                            <Star className="h-3 w-3 fill-amber-400" />
+                            4.8
+                        </div>
+                    </div>
                     <Link
                         href={`/products/${product.id}`}
-                        className="font-semibold text-white text-sm leading-tight hover:text-violet-300 transition-colors line-clamp-2"
+                        className="block font-bold text-white text-lg leading-tight hover:text-violet-400 transition-colors line-clamp-1"
                     >
                         {product.name}
                     </Link>
-                    <span className={`shrink-0 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${getCategoryColor(product.category)}`}>
-                        {product.category}
-                    </span>
                 </div>
 
-                <p className="text-xs text-slate-400 line-clamp-2 flex-1">
-                    {product.description || 'No description available.'}
+                <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed h-10">
+                    {product.description || 'Premium meticulously crafted item for your curated lifestyle collections.'}
                 </p>
 
-                <div className="flex items-center justify-between mt-2">
-                    <span className="text-lg font-bold text-white">
-                        {formatPrice(product.price)}
-                    </span>
+                <div className="flex items-center justify-between mt-2 pt-4 border-t border-white/5">
+                    <div className="flex flex-col">
+                        <span className="text-xs text-slate-500 font-medium uppercase tracking-widest leading-none mb-1">Price</span>
+                        <span className="text-2xl font-black text-white">
+                            {formatPrice(product.price)}
+                        </span>
+                    </div>
+                    
                     {!isAdmin && (
                         <button
                             onClick={handleAddToCart}
                             disabled={loading || !product.active}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-violet-500/25 transition-all"
+                            className="flex items-center justify-center p-3 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-500 hover:to-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed shadow-lg hover:shadow-violet-500/35 transition-all active:scale-95 group/btn"
                         >
                             {loading ? (
                                 <Spinner size="sm" />
                             ) : (
-                                <ShoppingCart className="h-3.5 w-3.5" />
+                                <ShoppingCart className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
                             )}
-                            Add to Cart
                         </button>
                     )}
                 </div>

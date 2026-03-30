@@ -1,8 +1,7 @@
-
 server:
   # Port is overridden to 8090 at runtime by Jenkins via -Dserver.port=8090
   # This default (8080) is used when running locally from your IDE
-  port: 8080
+  port: 8081
 
 spring:
   application:

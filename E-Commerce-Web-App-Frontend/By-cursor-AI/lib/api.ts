@@ -12,7 +12,7 @@ import type {
     OrderResponse,
 } from '@/types';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
 
 export const api = axios.create({
     baseURL: BASE_URL,
