@@ -134,6 +134,16 @@ Application will start at:
 http://localhost:8081
 ```
 
+### 🔑 Default Admin Credentials
+Upon the first run, the `DataInitializer` automatically creates a default admin account for testing purposes:
+
+| Role | Email | Password |
+|------|-------|----------|
+| **ADMIN** | `admin@ecommerce.com` | `Admin@123` |
+
+> [!TIP]
+> Use these credentials to log in via `/auth/login` and access admin-only endpoints for product management.
+
 ## 📘 6. API Documentation (Swagger)
 
 Swagger UI is enabled via springdoc-openapi.
