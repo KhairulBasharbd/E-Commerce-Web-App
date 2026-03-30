@@ -8,16 +8,16 @@ pipeline {
         // Must match the port mapped when you recreated Jenkins (-p 8090:8090).
         APP_PORT = '8090'
 
-        // Where the deployed JAR will live (persistent across builds via jenkins-data volume)
-        DEPLOY_DIR  = '/var/jenkins_home/deployments'
+        // Where the deployed JAR will live (persistent across builds)
+        DEPLOY_DIR  = '/var/lib/jenkins/deployments'
         APP_JAR     = 'ecommerce-app.jar'
-        APP_LOG     = '/var/jenkins_home/deployments/ecommerce-app.log'
-        PID_FILE    = '/var/jenkins_home/deployments/ecommerce-app.pid'
+        APP_LOG     = '/var/lib/jenkins/deployments/ecommerce-app.log'
+        PID_FILE    = '/var/lib/jenkins/deployments/ecommerce-app.pid'
 
         // ── Database config ───────────────────────────────────────────
         // 'host.docker.internal' resolves to the Windows host from inside any Docker container.
         // Your docker-compose maps postgres 5432:5432 to Windows, so this reaches it.
-        DB_URL      = 'jdbc:postgresql://host.docker.internal:5432/ecommerce_db'
+        DB_URL      = 'jdbc:postgresql://localhost:5432/ecommerce_db'
         DB_USERNAME = 'postgres'
         DB_PASSWORD = 'postgres'
 
@@ -214,7 +214,7 @@ pipeline {
 ╚══════════════════════════════════════════════════╝
 
   View live logs:
-  docker exec jenkins-blueocean tail -f /var/jenkins_home/deployments/ecommerce-app.log
+  tail -f /var/lib/jenkins/deployments/ecommerce-app.log
 """
         }
         failure {
@@ -225,12 +225,11 @@ pipeline {
 ║  • Look at the RED stage above for the error     ║
 ║  • Check app logs if deploy stage passed         ║
 ║  Command:                                        ║
-║  docker exec jenkins-blueocean cat               ║
-║      /var/jenkins_home/deployments/ecommerce-app.log ║
+║  cat /var/lib/jenkins/deployments/ecommerce-app.log
 ╚══════════════════════════════════════════════════╝
 """
             // If deploy succeeded but health check failed, try to show app logs
-            sh 'cat /var/jenkins_home/deployments/ecommerce-app.log 2>/dev/null | tail -50 || true'
+            sh 'cat /var/lib/jenkins/deployments/ecommerce-app.log 2>/dev/null | tail -50 || true'
         }
     }
 }

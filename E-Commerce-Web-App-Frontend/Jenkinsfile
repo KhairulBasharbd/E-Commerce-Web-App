@@ -7,9 +7,9 @@ pipeline {
 
     environment {
         PORT = '3000'
-        DEPLOY_DIR = '/var/jenkins_home/deployments/frontend'
-        PID_FILE = '/var/jenkins_home/deployments/frontend-app.pid'
-        APP_LOG = '/var/jenkins_home/deployments/frontend-app.log'
+        DEPLOY_DIR = '/var/lib/jenkins/deployments/frontend'
+        PID_FILE = '/var/lib/jenkins/deployments/frontend-app.pid'
+        APP_LOG = '/var/lib/jenkins/deployments/frontend-app.log'
         NEXT_PUBLIC_API_URL = 'http://localhost:8090'
         CI = 'true'
     }
